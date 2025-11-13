@@ -7,8 +7,16 @@ router.get("/search", function (req, res, next) {
 });
 
 router.get("/search-result", function (req, res, next) {
-    //searching in the database
-    res.send("You searched for: " + req.query.keyword);
+    let keyword = req.query.search_text;
+    let sqlquery = "SELECT * FROM books WHERE name LIKE ?";
+    let param = ["%" + keyword + "%"];
+
+    db.query(sqlquery, param, (err, result) => {
+        if (err) {
+            next(err);
+        }
+        res.render("list.ejs", { books: result });
+    });
 });
 
 router.get("/list", function (req, res, next) {
@@ -18,6 +26,16 @@ router.get("/list", function (req, res, next) {
             next(err);
         }
         res.render("list.ejs", { books: result });
+    });
+});
+
+router.get("/bargainbooks", function (req, res, next) {
+    let sqlquery = "SELECT * FROM books WHERE price < 20";
+    db.query(sqlquery, (err, result) => {
+        if (err) {
+            next(err);
+        }
+        res.render("bargainbooks.ejs", { books: result });
     });
 });
 
