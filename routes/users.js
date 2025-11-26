@@ -3,6 +3,14 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const router = express.Router();
 
+const redirectLogin = (req, res, next) => {
+    if (!req.session.userId) {
+        res.redirect("./login"); // redirect to the login page
+    } else {
+        next(); // move to the next middleware function
+    }
+};
+
 router.get("/register", function (req, res, next) {
     res.render("register.ejs");
 });
@@ -42,7 +50,7 @@ router.post("/registered", function (req, res, next) {
 });
 
 // List users (exclude passwords)
-router.get("/list", function (req, res, next) {
+router.get("/list", redirectLogin, function (req, res, next) {
     const sql = "SELECT id, username, first, last, email FROM users";
     global.db.query(sql, function (err, rows) {
         if (err) {
@@ -87,6 +95,8 @@ router.post("/loggedin", function (req, res, next) {
                 return next(cmpErr);
             }
             if (match) {
+                // Save user session here, when login is successful
+                req.session.userId = req.body.username;
                 const logSql = "INSERT INTO login_attempts (username, success, reason) VALUES (?,?,?)";
                 const logParams = [username, 1, null];
                 global.db.query(logSql, logParams, function () {
@@ -104,7 +114,7 @@ router.post("/loggedin", function (req, res, next) {
 });
 
 // Display full audit history of login attempts
-router.get("/audit", function (req, res, next) {
+router.get("/audit", redirectLogin, function (req, res, next) {
     const sql =
         "SELECT id, username, success, reason, DATE_FORMAT(attemptedAt,'%Y-%m-%d %H:%i:%s') AS attemptedAt FROM login_attempts ORDER BY attemptedAt DESC";
     global.db.query(sql, function (err, rows) {
@@ -112,6 +122,16 @@ router.get("/audit", function (req, res, next) {
             return next(err);
         }
         res.render("audit.ejs", { attempts: rows });
+    });
+});
+
+// Logout route
+router.get("/logout", redirectLogin, (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.redirect("./");
+        }
+        res.send("you are now logged out. <a href=" + "/" + ">Home</a>");
     });
 });
 

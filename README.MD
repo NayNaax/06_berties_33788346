@@ -121,3 +121,28 @@ berties-books/
 └── public/
     └── main.css         # Stylesheets
 ```
+
+## Access Control
+
+Access control has been implemented to restrict sensitive operations to logged-in users only.
+
+### Protected Routes (Login Required)
+
+The following routes require the user to be logged in. If a user attempts to access these pages without an active session, they will be redirected to the login page.
+
+-   `/users/list`: Protects the list of registered users.
+-   `/users/audit`: Protects the security audit logs.
+-   `/books/addbook`: Restricts adding new books to authorized users.
+-   `/books/bookadded`: Ensures only authorized users can submit the add book form.
+
+### Public Routes
+
+These routes are accessible to everyone, including guests:
+
+-   `/` (Home)
+-   `/about`
+-   `/users/register` & `/users/registered`
+-   `/users/login` & `/users/loggedin`
+-   `/books/search` & `/books/search-result`
+-   `/books/list`
+-   `/books/bargainbooks`
