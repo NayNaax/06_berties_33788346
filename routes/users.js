@@ -109,6 +109,7 @@ router.post("/loggedin", function (req, res, next) {
             global.db.query(logSql, logParams, function () {
                 return res.send("Login not successful: user not found.");
             });
+            return;
         }
         const storedHash = rows[0].hashedPassword;
         bcrypt.compare(password, storedHash, function (cmpErr, match) {
