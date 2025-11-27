@@ -1,6 +1,7 @@
 // Create a new router
 const express = require("express");
 const bcrypt = require("bcrypt");
+const { check, validationResult } = require("express-validator");
 const router = express.Router();
 
 const redirectLogin = (req, res, next) => {
@@ -15,39 +16,59 @@ router.get("/register", function (req, res, next) {
     res.render("register.ejs");
 });
 
-router.post("/registered", function (req, res, next) {
-    const saltRounds = 10;
-    const plainPassword = req.body.password;
-    bcrypt.hash(plainPassword, saltRounds, function (err, hashedPassword) {
-        if (err) {
-            return next(err);
+router.post(
+    "/registered",
+    [
+        check("email").isEmail(),
+        check("username").isLength({ min: 5, max: 20 }),
+        check("password").isLength({ min: 8 }),
+        check("first").notEmpty(),
+        check("last").notEmpty(),
+    ],
+    function (req, res, next) {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            res.render("./register");
+        } else {
+            const saltRounds = 10;
+            const plainPassword = req.body.password;
+            const sanitizedUsername = req.sanitize(req.body.username);
+            const sanitizedFirst = req.sanitize(req.body.first);
+            const sanitizedLast = req.sanitize(req.body.last);
+            const sanitizedEmail = req.sanitize(req.body.email);
+
+            bcrypt.hash(plainPassword, saltRounds, function (err, hashedPassword) {
+                if (err) {
+                    return next(err);
+                }
+                // Insert the new user into the users table
+                const sql = "INSERT INTO users (username, first, last, email, hashedPassword) VALUES (?,?,?,?,?)";
+                const params = [
+                    sanitizedUsername || null,
+                    sanitizedFirst || null,
+                    sanitizedLast || null,
+                    sanitizedEmail || null,
+                    hashedPassword,
+                ];
+                global.db.query(sql, params, function (dbErr, result) {
+                    if (dbErr) {
+                        return next(dbErr);
+                    }
+                    let responseMsg =
+                        "Hello " +
+                        sanitizedFirst +
+                        " " +
+                        sanitizedLast +
+                        " you are now registered!  We will send an email to you at " +
+                        sanitizedEmail;
+                    responseMsg +=
+                        " Your password is: " + req.body.password + " and your hashed password is: " + hashedPassword;
+                    res.send(responseMsg);
+                });
+            });
         }
-        // Insert the new user into the users table
-        const sql = "INSERT INTO users (username, first, last, email, hashedPassword) VALUES (?,?,?,?,?)";
-        const params = [
-            req.body.username || null,
-            req.body.first || null,
-            req.body.last || null,
-            req.body.email || null,
-            hashedPassword,
-        ];
-        global.db.query(sql, params, function (dbErr, result) {
-            if (dbErr) {
-                return next(dbErr);
-            }
-            let responseMsg =
-                "Hello " +
-                req.body.first +
-                " " +
-                req.body.last +
-                " you are now registered!  We will send an email to you at " +
-                req.body.email;
-            responseMsg +=
-                " Your password is: " + req.body.password + " and your hashed password is: " + hashedPassword;
-            res.send(responseMsg);
-        });
-    });
-});
+    }
+);
 
 // List users (exclude passwords)
 router.get("/list", redirectLogin, function (req, res, next) {
@@ -67,7 +88,7 @@ router.get("/login", function (req, res, next) {
 
 // Handle login submission
 router.post("/loggedin", function (req, res, next) {
-    const username = req.body.username;
+    const username = req.sanitize(req.body.username);
     const password = req.body.password;
     if (!username || !password) {
         const logSql = "INSERT INTO login_attempts (username, success, reason) VALUES (?,?,?)";
@@ -96,7 +117,7 @@ router.post("/loggedin", function (req, res, next) {
             }
             if (match) {
                 // Save user session here, when login is successful
-                req.session.userId = req.body.username;
+                req.session.userId = username;
                 const logSql = "INSERT INTO login_attempts (username, success, reason) VALUES (?,?,?)";
                 const logParams = [username, 1, null];
                 global.db.query(logSql, logParams, function () {
