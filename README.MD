@@ -207,5 +207,33 @@ The following fields are sanitized to remove potentially malicious HTML tags (e.
 
 ### Unsanitized Fields
 
--   **Password**: The password field is **NOT** sanitized.
     -   **Reasoning**: Passwords may legitimately contain special characters (like `<`, `>`, `&`) that sanitizers might remove or escape. Altering the password would result in the user saving a different password than they intended, causing login failures. Since passwords are hashed before storage and should not be displayed in plain text, the XSS risk is mitigated by proper handling rather than sanitization.
+
+## API Documentation
+
+The application provides a RESTful API to access book data.
+
+### Get All Books
+
+**Endpoint:** `GET /api/books`
+
+Returns a JSON list of all books in the database.
+
+### Query Parameters
+
+You can filter and sort the results using the following query parameters:
+
+-   **search**: Filter books by name (partial match).
+    -   Example: `/api/books?search=universe`
+-   **minprice**: Filter books with a price greater than or equal to this value.
+    -   Example: `/api/books?minprice=5`
+-   **max_price**: Filter books with a price less than or equal to this value.
+    -   Example: `/api/books?max_price=15`
+-   **sort**: Sort the results by a specific field.
+    -   Options: `name`, `price`
+    -   Example: `/api/books?sort=price`
+
+### Combined Example
+
+`GET /api/books?search=world&minprice=5&max_price=20&sort=price`
+Returns books containing "world" in the name, priced between £5 and £20, sorted by price.
